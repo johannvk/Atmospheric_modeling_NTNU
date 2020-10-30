@@ -24,7 +24,7 @@ def cloud_atmosphere_model():
     P_sun, sigma = sy.symbols("P_sun, sigma", real=True, positive=True)
 
     # Atmosphere variables:
-    T_A, r_sm, a_sw, a_lw, a_O3, eps_A, f_A = sy.symbols("T_A, r_sm, a_sw, a_lw, a_O3, eps_A, f_A", 
+    T_A, r_sm, a_sw, a_lw, a_O3, eps_A, f_A = sy.symbols("T_A, r_sm, a_sw, a_lw, a_O3, eps_A, f_A",
                                                         real=True, positive=True)
 
     # Cloud variables:
@@ -32,7 +32,7 @@ def cloud_atmosphere_model():
                                                 real=True, positive=True)
 
     # Earth variables:
-    T_E, r_se, r_le, eps_E = sy.symbols("T_E, r_se, r_le, eps_E", 
+    T_E, r_se, r_le, eps_E = sy.symbols("T_E, r_se, r_le, eps_E",
                                         real=True, positive=True)
 
     # Effective Black body emission power for atmosphere, clouds and the eart:
@@ -56,15 +56,15 @@ def cloud_atmosphere_model():
     def earth_equation():
         # 12CCτC+ [(1−CC) +CC(1−rLC)(1−aLC)]fAτA+CCrLCτE
         l_E = sy.Rational(1, 2)*Cc*tau_C + ((1 - Cc) + Cc*(1 - r_lc)*(1 - a_lc))*f_A*tau_A + Cc*r_lc*tau_E
-        s_E = P_sun*(1-r_sm)*(1-a_sa)*((1-Cc)*(1-r_se) + Cc*(1-r_sc)*(1-a_sc)*geometric_reflection*(1-r_se)/(1-r_se*r_sc))
+        s_E = P_sun*(1-r_sm)*(1-a_sa)*((1-Cc)*(1-r_se) + Cc*(1-r_sc)*(1-a_sc)*geometric_reflection*(1-r_se)/(1-r_se*r_sc))*(1-r_se)
 
         return sy.Eq(l_E + s_E, tau_E)
-    
+
     def cloud_equation():
         l_C = Cc*tau_E + Cc*f_A*tau_A
         # P0S(1−rSM)(1−αSA)CC1−rSC1−rSCrSMαSC(1 + (1−αSC)rSE1−rSC1−rSCrSE)
-        s_C = P_sun*(1 - r_sm)*(1 - a_sa)*Cc*(1 - r_sc)*geometric_reflection*a_sc*(1 + (1 - a_sc)*r_se*(1 - r_sc)*geometric_reflection)
-        
+        s_C = P_sun*(1 - r_sm)*(1 - a_sa)*Cc*(1 - r_sc)*geometric_reflection*a_sc*(1 + (1 - a_sc)*r_se*(1 - r_sc)/(1-r_sc*r_se))
+
         return sy.Eq(l_C + s_C, tau_C)
 
     def atmosphere_equation():
@@ -75,18 +75,20 @@ def cloud_atmosphere_model():
 
         return sy.Eq(l_A + s_A, tau_A)
 
-    
+
     Earth_eq = earth_equation().subs(parameter_values)
     Cloud_eq = cloud_equation().subs(parameter_values)
     Atmosphere_eq = atmosphere_equation().subs(parameter_values)
 
     ans = solve([Earth_eq, Cloud_eq, Atmosphere_eq], [T_A, T_C, T_E])
-    print("Ans:", ans)
-    
+    print("Ans in Kelvin :", ans)
+    print("Ans in Celsius:", [T-273.15 for T in ans[0]])
+    print("(Atmosphere, cloud, earth respectively)")
+
 
 
 def main():
-    
+
     cloud_atmosphere_model()
     # from models import simple_model
 
