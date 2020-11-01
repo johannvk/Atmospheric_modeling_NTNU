@@ -47,3 +47,10 @@ def simple_model():
     print("Answer:", ans)
     # print("Testing!")
 
+
+def atmospheric_model():
+    import parameters
+    print(parameters.parameter_values)
+
+
+atmospheric_model()

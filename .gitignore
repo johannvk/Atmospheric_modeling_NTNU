@@ -125,5 +125,9 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
+# Poetry files (Johannes):
+*.toml
+*.lock
+
 # Pyre type checker
 .pyre/
