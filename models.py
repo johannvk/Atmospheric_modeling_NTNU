@@ -18,7 +18,7 @@ def simple_model():
     sw_E_refl, sw_E_abs, sw_E_trans = radiation_scattering(sw_A_trans, a=sy.Integer(1), r=r_se)
     
     # Short-wave radiation hitting the atmosphere again:
-    sw_E_to_A_refl, sw_E_to_A_abs, sw_E_to_A_trans = radiation_scattering(sw_E_refl, a=a_sa, r=r_se)
+    sw_E_to_A_refl, sw_E_to_A_abs, sw_E_to_A_trans = radiation_scattering(sw_E_refl, a=a_sa, r=r_sm)
     # Ignore further reflection of SW radiation down to earth again.
 
     # Long wave reflected radiation from the earth hitting the Atmosphere:
@@ -51,7 +51,7 @@ def simple_model():
 
 
 def cloud_atmosphere_model():
-
+    # f_A = 2*f_A
     def earth_equation():
         # 12CCτC+ [(1−CC) +CC(1−rLC)(1−aLC)]fAτA+CCrLCτE
         l_E = sy.Rational(1, 2)*Cc*tau_C + ((1 - Cc) + Cc*(1 - r_lc)*(1 - a_lc))*f_A*tau_A + Cc*r_lc*tau_E
@@ -91,7 +91,7 @@ def atmospheric_model():
 
 
 if __name__ == "__main__":
-    simple_model()
+    # simple_model()
     # atmospheric_model()
-    # cloud_atmosphere_model()
+    cloud_atmosphere_model()
     pass
