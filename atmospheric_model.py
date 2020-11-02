@@ -1,6 +1,10 @@
 import numpy as np
 import sympy as sy
-from sympy.solvers.solveset import solveset, solveset_real
+from scipy.optimize import fsolve
+
+from sympy.utilities.lambdify import lambdify
+from sympy.solvers.solveset import solveset, solveset_real, nonlinsolve
+from sympy.sets.sets import FiniteSet
 from sympy.solvers import solve
 
 
@@ -58,14 +62,14 @@ def cloud_atmosphere_model():
         l_E = sy.Rational(1, 2)*Cc*tau_C + ((1 - Cc) + Cc*(1 - r_lc)*(1 - a_lc))*f_A*tau_A + Cc*r_lc*tau_E
         s_E = P_sun*(1-r_sm)*(1-a_sa)*((1-Cc)*(1-r_se) + Cc*(1-r_sc)*(1-a_sc)*geometric_reflection*(1-r_se)/(1-r_se*r_sc))*(1-r_se)
 
-        return sy.Eq(l_E + s_E, tau_E + sy.Integer(14*7))
+        return sy.Eq(l_E + s_E, tau_E + sy.Integer(14*7)), l_E + s_E - (tau_E + sy.Integer(7)*(T_E - T_A))
 
     def cloud_equation():
         l_C = Cc*tau_E + Cc*f_A*tau_A
         # P0S(1−rSM)(1−αSA)CC1−rSC1−rSCrSMαSC(1 + (1−αSC)rSE1−rSC1−rSCrSE)
         s_C = P_sun*(1 - r_sm)*(1 - a_sa)*Cc*(1 - r_sc)*geometric_reflection*a_sc*(1 + (1 - a_sc)*r_se*(1 - r_sc)/(1-r_sc*r_se))
 
-        return sy.Eq(l_C + s_C, tau_C)
+        return sy.Eq(l_C + s_C, tau_C), l_C + s_C - tau_C
 
     def atmosphere_equation():
 
@@ -73,20 +77,34 @@ def cloud_atmosphere_model():
 
         s_A = P_sun*(1 - r_sm)*(a_sa + (1-a_sa)*Cc*r_sc*(1-r_sm)*geometric_reflection*a_sa + (1-a_sa)*(1-Cc)*r_se*a_sa)
 
-        return sy.Eq(l_A + s_A + sy.Integer(14*7), tau_A)
+        return sy.Eq(l_A + s_A + sy.Integer(14*7), tau_A), l_A + s_A + sy.Integer(7)*(T_E - T_A) - tau_A
 
 
-    Earth_eq = earth_equation().subs(parameter_values)
-    Cloud_eq = cloud_equation().subs(parameter_values)
-    Atmosphere_eq = atmosphere_equation().subs(parameter_values)
+    Earth_eq, earth_expr = earth_equation()
+    Cloud_eq, cloud_expr = cloud_equation()
+    Atmosphere_eq, atm_expr = atmosphere_equation()
 
+    earth_func = lambdify([T_E, T_A, T_C], earth_expr.subs(parameter_values), modules='numpy')
+    cloud_func = lambdify([T_E, T_A, T_C], cloud_expr.subs(parameter_values), modules='numpy')
+    atm_func = lambdify([T_E, T_A, T_C], atm_expr.subs(parameter_values), modules='numpy')
+
+    def objective(p):
+        t_e, t_a, t_c = p
+        return np.array([earth_func(t_e, t_a, t_c), cloud_func(t_e, t_a, t_c), atm_func(t_e, t_a, t_c)])
+    
+    solutions = fsolve(objective, x0=np.ones(3)*273.15)
+
+    ans_set = nonlinsolve([earth_expr.subs(parameter_values), 
+                           cloud_expr.subs(parameter_values), 
+                           atm_expr.subs(parameter_values)], [T_A, T_E, T_C])
+    
     print(earth_equation, atmosphere_equation,cloud_equation)
-
-    ans = solve([Earth_eq, Cloud_eq, Atmosphere_eq], [T_A, T_C, T_E])
+    
+    ans = solve([earth_expr.subs(parameter_values), cloud_expr.subs(parameter_values), atm_expr.subs(parameter_values)], [T_A, T_C, T_E])
+    # ans = solve([Earth_eq.subs(parameter_values), Cloud_eq.subs(parameter_values), Atmosphere_eq.subs(parameter_values)], [T_A, T_C, T_E])
     print("Ans in Kelvin :", ans)
     print("Ans in Celsius:", [T-273.15 for T in ans[0]])
     print("(Atmosphere, cloud, earth respectively)")
-
 
 
 def main():
