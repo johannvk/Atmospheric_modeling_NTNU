@@ -44,7 +44,7 @@ def cloud_atmosphere_model():
 
     base_param_values = [(sigma, 5.670374e-8), (P_sun, 341.3)]
 
-    atmosphere_param_values = [(r_sm, 0.1065), (a_sw, 0.1451), (a_lw, 0.8258), (a_O3, 0.08), (eps_A, 0.875), (f_A, 0.618)]
+    atmosphere_param_values = [(r_sm, 0.1065), (a_sw, 0.1451), (a_lw, 0.8258), (a_O3, 0.08), (eps_A, 2*0.875), (f_A, 0.5)]
 
     cloud_param_values = [(Cc, 0.66), (a_sc, 0.1239), (r_sc, 0.22), (a_lc, 0.622), (r_lc, 0.195)]
 
@@ -58,7 +58,7 @@ def cloud_atmosphere_model():
         l_E = sy.Rational(1, 2)*Cc*tau_C + ((1 - Cc) + Cc*(1 - r_lc)*(1 - a_lc))*f_A*tau_A + Cc*r_lc*tau_E
         s_E = P_sun*(1-r_sm)*(1-a_sa)*((1-Cc)*(1-r_se) + Cc*(1-r_sc)*(1-a_sc)*geometric_reflection*(1-r_se)/(1-r_se*r_sc))*(1-r_se)
 
-        return sy.Eq(l_E + s_E, tau_E)
+        return sy.Eq(l_E + s_E, tau_E + sy.Integer(14*7))
 
     def cloud_equation():
         l_C = Cc*tau_E + Cc*f_A*tau_A
@@ -73,12 +73,14 @@ def cloud_atmosphere_model():
 
         s_A = P_sun*(1 - r_sm)*(a_sa + (1-a_sa)*Cc*r_sc*(1-r_sm)*geometric_reflection*a_sa + (1-a_sa)*(1-Cc)*r_se*a_sa)
 
-        return sy.Eq(l_A + s_A, tau_A)
+        return sy.Eq(l_A + s_A + sy.Integer(14*7), tau_A)
 
 
     Earth_eq = earth_equation().subs(parameter_values)
     Cloud_eq = cloud_equation().subs(parameter_values)
     Atmosphere_eq = atmosphere_equation().subs(parameter_values)
+
+    print(earth_equation, atmosphere_equation,cloud_equation)
 
     ans = solve([Earth_eq, Cloud_eq, Atmosphere_eq], [T_A, T_C, T_E])
     print("Ans in Kelvin :", ans)
