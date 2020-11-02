@@ -19,7 +19,7 @@ def radiation_scattering(P_in, a, r):
     return P_refl, P_abs, P_trans
 
 
-def cloud_atmosphere_model():
+def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
     # Base parameters. Sun incoming power, Stefan–Boltzmann constant.
     P_sun, sigma = sy.symbols("P_sun, sigma", real=True, positive=True)
 
@@ -53,19 +53,22 @@ def cloud_atmosphere_model():
     parameter_values = base_param_values + atmosphere_param_values + \
                     cloud_param_values + earth_param_values
 
+    if nudge:
+        parameter_values[i] = (parameter_values[i][0], parameter_values[i][1]*1.01)
+
     def earth_equation():
         # 12CCτC+ [(1−CC) +CC(1−rLC)(1−aLC)]fAτA+CCrLCτE
         l_E = sy.Rational(1, 2)*Cc*tau_C + ((1 - Cc) + Cc*(1 - r_lc)*(1 - a_lc))*f_A*tau_A + Cc*r_lc*tau_E
         s_E = P_sun*(1-r_sm)*(1-a_sa)*((1-Cc)*(1-r_se) + Cc*(1-r_sc)*(1-a_sc)*geometric_reflection*(1-r_se)/(1-r_se*r_sc))*(1-r_se)
 
-        return sy.Eq(l_E + s_E, tau_E + sy.Integer(14*7))
+        return sy.Eq(l_E + s_E, tau_E + sy.Float(temperature_difference*7))
 
     def cloud_equation():
         l_C = Cc*tau_E + Cc*f_A*tau_A
         # P0S(1−rSM)(1−αSA)CC1−rSC1−rSCrSMαSC(1 + (1−αSC)rSE1−rSC1−rSCrSE)
         s_C = P_sun*(1 - r_sm)*(1 - a_sa)*Cc*(1 - r_sc)*geometric_reflection*a_sc*(1 + (1 - a_sc)*r_se*(1 - r_sc)/(1-r_sc*r_se))
 
-        return sy.Eq(l_C + s_C, tau_C)
+        return sy.Eq(l_C + s_C + sy.Float(temperature_difference*7), tau_C)
 
     def atmosphere_equation():
 
@@ -73,29 +76,45 @@ def cloud_atmosphere_model():
 
         s_A = P_sun*(1 - r_sm)*(a_sa + (1-a_sa)*Cc*r_sc*(1-r_sm)*geometric_reflection*a_sa + (1-a_sa)*(1-Cc)*r_se*a_sa)
 
-        return sy.Eq(l_A + s_A + sy.Integer(14*7), tau_A)
+        return sy.Eq(l_A + s_A, tau_A)
 
 
     Earth_eq = earth_equation().subs(parameter_values)
     Cloud_eq = cloud_equation().subs(parameter_values)
     Atmosphere_eq = atmosphere_equation().subs(parameter_values)
 
-    print(earth_equation, atmosphere_equation,cloud_equation)
-
     ans = solve([Earth_eq, Cloud_eq, Atmosphere_eq], [T_A, T_C, T_E])
-    print("Ans in Kelvin :", ans)
-    print("Ans in Celsius:", [T-273.15 for T in ans[0]])
-    print("(Atmosphere, cloud, earth respectively)")
 
+    #print("Ans in Kelvin :", ans)
+    #print("Ans in Celsius:", [T-273.15 for T in ans[0]])
+    #print("(Atmosphere, cloud, earth respectively)")
+    return(ans)
+
+def solve_with_heat(tol = 0.001, nudge = False, i=0):
+    diff = 15.6728951112
+    for j in range (20):
+        print('j=',j)
+        ans = cloud_atmosphere_model(diff, nudge, i)[0]
+        new_diff = ans[2]-ans[1]
+        diff = diff + (new_diff - diff)/2
+        #print('diff:', diff)
+        if abs(diff - new_diff)<tol:
+            break
+    #print("Ans in Celsius:", [T-273.15 for T in ans])
+    return ans
+
+def diff(tol = 0.00001):
+    param_names = ['sigma','psun','r_sm', 'a_sw', 'a_lw', 'a_03', 'eps_A', 'f_a', 'cc','a_sc', 'r_sc', 'a_lc', 'r_lc','r_se', 'r_le', 'eps_e']
+    for i in range(20):
+        print('i=',i)
+        ans1 = solve_with_heat(tol)
+        ans2 = solve_with_heat(tol, True, i)
+        ans = (np.array(ans2)-np.array(ans1))/np.array(ans1)*100
+        print(param_names[i],ans)
 
 
 def main():
-
-    cloud_atmosphere_model()
-    # from models import simple_model
-
-    # simple_model()
-
+    diff()
 
 if __name__ == "__main__":
     main()
