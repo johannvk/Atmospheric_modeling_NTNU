@@ -44,7 +44,7 @@ def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
 
     base_param_values = [(sigma, 5.670374e-8), (P_sun, 341.3)]
 
-    atmosphere_param_values = [(r_sm, 0.1065), (a_sw, 0.1451), (a_lw, 0.8258), (a_O3, 0.08), (eps_A, 2*0.875), (f_A, 0.5)]
+    atmosphere_param_values = [(r_sm, 0.1065), (a_sw, 0.1451), (a_lw, 0.8258), (a_O3, 0.08), (eps_A, 0.875), (f_A, 1)]
 
     cloud_param_values = [(Cc, 0.66), (a_sc, 0.1239), (r_sc, 0.22), (a_lc, 0.622), (r_lc, 0.195)]
 
@@ -58,7 +58,7 @@ def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
 
     def earth_equation():
         # 12CCτC+ [(1−CC) +CC(1−rLC)(1−aLC)]fAτA+CCrLCτE
-        l_E = sy.Rational(1, 2)*Cc*tau_C + ((1 - Cc) + Cc*(1 - r_lc)*(1 - a_lc))*f_A*tau_A + Cc*r_lc*tau_E
+        l_E = Cc*tau_C + ((1 - Cc) + Cc*(1 - r_lc)*(1 - a_lc))*f_A*tau_A + Cc*r_lc*tau_E
         s_E = P_sun*(1-r_sm)*(1-a_sa)*((1-Cc)*(1-r_se) + Cc*(1-r_sc)*(1-a_sc)*geometric_reflection*(1-r_se)/(1-r_se*r_sc))*(1-r_se)
 
         return sy.Eq(l_E + s_E, tau_E + sy.Float(temperature_difference*7))
@@ -68,15 +68,15 @@ def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
         # P0S(1−rSM)(1−αSA)CC1−rSC1−rSCrSMαSC(1 + (1−αSC)rSE1−rSC1−rSCrSE)
         s_C = P_sun*(1 - r_sm)*(1 - a_sa)*Cc*(1 - r_sc)*geometric_reflection*a_sc*(1 + (1 - a_sc)*r_se*(1 - r_sc)/(1-r_sc*r_se))
 
-        return sy.Eq(l_C + s_C + sy.Float(temperature_difference*7), tau_C)
+        return sy.Eq(l_C + s_C + sy.Float(temperature_difference*7), 2*tau_C)
 
     def atmosphere_equation():
 
-        l_A = sy.Rational(1, 2)*Cc*tau_C + ((1 - Cc) + Cc*(1 - r_lc)*(1 - a_lc))*tau_E + Cc*r_lc*f_A*tau_A
+        l_A = Cc*tau_C + ((1 - Cc) + Cc*(1 - r_lc)*(1 - a_lc))*tau_E + Cc*r_lc*f_A*tau_A
 
         s_A = P_sun*(1 - r_sm)*(a_sa + (1-a_sa)*Cc*r_sc*(1-r_sm)*geometric_reflection*a_sa + (1-a_sa)*(1-Cc)*r_se*a_sa)
 
-        return sy.Eq(l_A + s_A, tau_A)
+        return sy.Eq(l_A + s_A, 2*tau_A)
 
 
     Earth_eq = earth_equation().subs(parameter_values)
