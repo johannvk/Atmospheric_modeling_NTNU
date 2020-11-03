@@ -6,6 +6,10 @@ from sympy.solvers import solve
 from scipy.optimize import fsolve
 from sympy.utilities.lambdify import lambdify
 
+# Import all the necessary parameters:
+from parameters import *
+
+
 def radiation_scattering(P_in, a, r):
     """
     Returns the amount of power 'P_in' reflected,
@@ -22,40 +26,6 @@ def radiation_scattering(P_in, a, r):
 
 
 def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
-    # Base parameters. Sun incoming power, Stefan–Boltzmann constant.
-    P_sun, sigma = sy.symbols("P_sun, sigma", real=True, positive=True)
-
-    # Atmosphere variables:
-    T_A, r_sm, a_sw, a_lw, a_O3, eps_A, f_A = sy.symbols("T_A, r_sm, a_sw, a_lw, a_O3, eps_A, f_A",
-                                                        real=True, positive=True)
-
-    # Cloud variables:
-    T_C, Cc, a_sc, r_sc, a_lc, r_lc = sy.symbols("T_C, Cc, a_sc, r_sc, a_lc, r_lc",
-                                                real=True, positive=True)
-
-    # Earth variables:
-    T_E, r_se, r_le, eps_E = sy.symbols("T_E, r_se, r_le, eps_E",
-                                        real=True, positive=True)
-
-    # Effective Black body emission power for atmosphere, clouds and the eart:
-    tau_A, tau_C, tau_E = eps_A*sigma*T_A**4, eps_A*sigma*T_C**4, sigma*T_E**4
-
-    # Useful variables for defining our model:
-    a_sa = sy.Integer(1) - (sy.Integer(1) - a_sw)*(sy.Integer(1) - a_O3)
-    geometric_reflection = sy.Integer(1)/(sy.Integer(1) - r_sc*r_sm)
-    E_A_temp_diff = T_E - T_A
-
-    base_param_values = [(sigma, 5.670374e-8), (P_sun, 341.3)]
-
-    atmosphere_param_values = [(r_sm, 0.1065), (a_sw, 0.1451), (a_lw, 0.8258), (a_O3, 0.08), (eps_A, 0.875), (f_A, 1)]
-
-    cloud_param_values = [(Cc, 0.66), (a_sc, 0.1239), (r_sc, 0.22), (a_lc, 0.622), (r_lc, 0.195)]
-
-    earth_param_values = [(r_se, 0.17), (r_le, 0.0), (eps_E, 1.0)]
-
-    parameter_values = base_param_values + atmosphere_param_values + \
-                    cloud_param_values + earth_param_values
-
     if nudge:
         parameter_values[i] = (parameter_values[i][0], parameter_values[i][1]*1.01)
 
@@ -91,6 +61,11 @@ def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
     Cloud_eq, cloud_expr = cloud_equation()
     Atmosphere_eq, atm_expr = atmosphere_equation()
 
+    # Equations and expressions:
+    return (Atmosphere_eq, Cloud_eq, Earth_eq), (atm_expr, cloud_expr, earth_expr)
+
+    # Vært hard i kommenteringen her. Prøvde å separere funksjonalitet inn i forskjellige funksjoner. :)
+    """
     earth_func = lambdify([T_E, T_A, T_C], earth_expr.subs(parameter_values), modules='numpy')
     cloud_func = lambdify([T_E, T_A, T_C], cloud_expr.subs(parameter_values), modules='numpy')
     atm_func = lambdify([T_E, T_A, T_C], atm_expr.subs(parameter_values), modules='numpy')
@@ -110,6 +85,7 @@ def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
     #print("Ans in Celsius:", [T-273.15 for T in ans[0]])
     #print("(Atmosphere, cloud, earth respectively)")
     return(ans)
+    """
 
 def solve_with_heat(tol = 0.001, nudge = False, i=0):
     diff = 15.6728951112
@@ -124,18 +100,58 @@ def solve_with_heat(tol = 0.001, nudge = False, i=0):
     #print("Ans in Celsius:", [T-273.15 for T in ans])
     return ans
 
-def diff(tol = 0.00001):
-    param_names = ['sigma','psun','r_sm', 'a_sw', 'a_lw', 'a_03', 'eps_A', 'f_a', 'cc','a_sc', 'r_sc', 'a_lc', 'r_lc','r_se', 'r_le', 'eps_e']
+
+def solve_temperatures(expressions, nudge=False, i=0):
+    atm_expr, cloud_expr, earth_expr = expressions
+    
+    if nudge:
+        nudge_tup = (parameter_values[i][0], parameter_values[i][1]*1.01)
+        subs_list = [nudge_tup] + parameter_values
+    else:
+        subs_list = parameter_values
+
+    atm_func = lambdify([T_E, T_A, T_C], atm_expr.subs(subs_list), modules='numpy')
+    cloud_func = lambdify([T_E, T_A, T_C], cloud_expr.subs(subs_list), modules='numpy')
+    earth_func = lambdify([T_E, T_A, T_C], earth_expr.subs(subs_list), modules='numpy')
+
+    def objective(p):
+        t_a, t_c, t_e = p
+        return np.array([atm_func(t_e, t_a, t_c), cloud_func(t_e, t_a, t_c), earth_func(t_e, t_a, t_c)])
+    
+    # Solutions: In order T_A, T_C, T_E:
+    return fsolve(objective, x0=np.ones(3)*273.15)
+
+def sensitivity_analysis(tol = 0.00001):
+    param_names = ['sigma','psun','r_sm', 'a_sw', 'a_lw', 'a_03', 'eps_A', 'f_a', 
+                   'cc','a_sc', 'r_sc', 'a_lc', 'r_lc','r_se', 'r_le', 'eps_e']
+    
+    model_eq, model_expr = cloud_atmosphere_model(temperature_difference=15, nudge=False)
+    
+    orig_ans = solve_temperatures(model_expr)
+
+    print(f"Model temperatures in Celsius: \nT_A: {orig_ans[0]-273.15}, \
+            \tT_C: {orig_ans[1]-273.15},\tT_E: {orig_ans[2]-273.15}.\n")    
+    
+    for i in range(len(parameter_values)):
+        
+        print('i=', i, f"Nudging parameter: {param_names[i]}.")
+        nudge_ans = solve_temperatures(model_expr, nudge=True, i=i)
+
+        percent_change = (np.array(nudge_ans)-np.array(orig_ans))/np.array(orig_ans)*100
+        print(f"Relative change in temperatures in %:\t {percent_change}\n")
+
+    """
     for i in range(20):
+        
         print('i=',i)
         ans1 = solve_with_heat(tol)
         ans2 = solve_with_heat(tol, True, i)
         ans = (np.array(ans2)-np.array(ans1))/np.array(ans1)*100
         print(param_names[i],ans)
-
+    """
 
 def main():
-    diff()
+    sensitivity_analysis()
 
 if __name__ == "__main__":
     main()
