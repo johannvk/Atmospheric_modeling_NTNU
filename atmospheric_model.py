@@ -3,6 +3,8 @@ import sympy as sy
 from sympy.solvers.solveset import solveset, solveset_real
 from sympy.solvers import solve
 
+from scipy.optimize import fsolve
+from sympy.utilities.lambdify import lambdify
 
 def radiation_scattering(P_in, a, r):
     """
@@ -41,6 +43,7 @@ def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
     # Useful variables for defining our model:
     a_sa = sy.Integer(1) - (sy.Integer(1) - a_sw)*(sy.Integer(1) - a_O3)
     geometric_reflection = sy.Integer(1)/(sy.Integer(1) - r_sc*r_sm)
+    E_A_temp_diff = T_E - T_A
 
     base_param_values = [(sigma, 5.670374e-8), (P_sun, 341.3)]
 
@@ -61,29 +64,47 @@ def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
         l_E = Cc*tau_C + ((1 - Cc) + Cc*(1 - r_lc)*(1 - a_lc))*f_A*tau_A + Cc*r_lc*tau_E
         s_E = P_sun*(1-r_sm)*(1-a_sa)*((1-Cc)*(1-r_se) + Cc*(1-r_sc)*(1-a_sc)*geometric_reflection*(1-r_se)/(1-r_se*r_sc))*(1-r_se)
 
-        return sy.Eq(l_E + s_E, tau_E + sy.Float(temperature_difference*7))
+        equation = sy.Eq(l_E + s_E, tau_E + sy.Float(temperature_difference*7))
+        expr = l_E + s_E - (tau_E + sy.Float(7)*E_A_temp_diff)
+        return equation, expr
 
     def cloud_equation():
         l_C = Cc*tau_E + Cc*f_A*tau_A
         # P0S(1−rSM)(1−αSA)CC1−rSC1−rSCrSMαSC(1 + (1−αSC)rSE1−rSC1−rSCrSE)
         s_C = P_sun*(1 - r_sm)*(1 - a_sa)*Cc*(1 - r_sc)*geometric_reflection*a_sc*(1 + (1 - a_sc)*r_se*(1 - r_sc)/(1-r_sc*r_se))
 
-        return sy.Eq(l_C + s_C + sy.Float(temperature_difference*7), 2*tau_C)
+        equation = sy.Eq(l_C + s_C + sy.Float(temperature_difference*7), 2*tau_C)
+        expr = l_C + s_C + sy.Float(7)*E_A_temp_diff - 2*tau_C
+        return equation, expr
 
     def atmosphere_equation():
 
         l_A = Cc*tau_C + ((1 - Cc) + Cc*(1 - r_lc)*(1 - a_lc))*tau_E + Cc*r_lc*f_A*tau_A
 
         s_A = P_sun*(1 - r_sm)*(a_sa + (1-a_sa)*Cc*r_sc*(1-r_sm)*geometric_reflection*a_sa + (1-a_sa)*(1-Cc)*r_se*a_sa)
+        equation = sy.Eq(l_A + s_A, 2*tau_A)
+        expr = l_A + s_A - 2*tau_A
+        return equation, expr 
 
-        return sy.Eq(l_A + s_A, 2*tau_A)
 
+    Earth_eq, earth_expr = earth_equation()
+    Cloud_eq, cloud_expr = cloud_equation()
+    Atmosphere_eq, atm_expr = atmosphere_equation()
 
-    Earth_eq = earth_equation().subs(parameter_values)
-    Cloud_eq = cloud_equation().subs(parameter_values)
-    Atmosphere_eq = atmosphere_equation().subs(parameter_values)
+    earth_func = lambdify([T_E, T_A, T_C], earth_expr.subs(parameter_values), modules='numpy')
+    cloud_func = lambdify([T_E, T_A, T_C], cloud_expr.subs(parameter_values), modules='numpy')
+    atm_func = lambdify([T_E, T_A, T_C], atm_expr.subs(parameter_values), modules='numpy')
 
-    ans = solve([Earth_eq, Cloud_eq, Atmosphere_eq], [T_A, T_C, T_E])
+    def objective(p):
+        t_a, t_c, t_e = p
+        return np.array([atm_func(t_e, t_a, t_c), cloud_func(t_e, t_a, t_c), earth_func(t_e, t_a, t_c)])
+    
+    solutions = fsolve(objective, x0=np.ones(3)*273.15)
+
+    ans = solve([Earth_eq.subs(parameter_values), 
+                 Cloud_eq.subs(parameter_values), 
+                 Atmosphere_eq.subs(parameter_values)], 
+                 [T_A, T_C, T_E])
 
     #print("Ans in Kelvin :", ans)
     #print("Ans in Celsius:", [T-273.15 for T in ans[0]])
