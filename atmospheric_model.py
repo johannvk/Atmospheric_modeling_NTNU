@@ -64,28 +64,6 @@ def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
     # Equations and expressions:
     return (Atmosphere_eq, Cloud_eq, Earth_eq), (atm_expr, cloud_expr, earth_expr)
 
-    # Vært hard i kommenteringen her. Prøvde å separere funksjonalitet inn i forskjellige funksjoner. :)
-    """
-    earth_func = lambdify([T_E, T_A, T_C], earth_expr.subs(parameter_values), modules='numpy')
-    cloud_func = lambdify([T_E, T_A, T_C], cloud_expr.subs(parameter_values), modules='numpy')
-    atm_func = lambdify([T_E, T_A, T_C], atm_expr.subs(parameter_values), modules='numpy')
-
-    def objective(p):
-        t_a, t_c, t_e = p
-        return np.array([atm_func(t_e, t_a, t_c), cloud_func(t_e, t_a, t_c), earth_func(t_e, t_a, t_c)])
-    
-    solutions = fsolve(objective, x0=np.ones(3)*273.15)
-
-    ans = solve([Earth_eq.subs(parameter_values), 
-                 Cloud_eq.subs(parameter_values), 
-                 Atmosphere_eq.subs(parameter_values)], 
-                 [T_A, T_C, T_E])
-
-    #print("Ans in Kelvin :", ans)
-    #print("Ans in Celsius:", [T-273.15 for T in ans[0]])
-    #print("(Atmosphere, cloud, earth respectively)")
-    return(ans)
-    """
 
 def solve_with_heat(tol = 0.001, nudge = False, i=0):
     diff = 15.6728951112
@@ -140,15 +118,6 @@ def sensitivity_analysis(tol = 0.00001):
         percent_change = (np.array(nudge_ans)-np.array(orig_ans))/np.array(orig_ans)*100
         print(f"Relative change in temperatures in %:\t {percent_change}\n")
 
-    """
-    for i in range(20):
-        
-        print('i=',i)
-        ans1 = solve_with_heat(tol)
-        ans2 = solve_with_heat(tol, True, i)
-        ans = (np.array(ans2)-np.array(ans1))/np.array(ans1)*100
-        print(param_names[i],ans)
-    """
 
 def main():
     sensitivity_analysis()
