@@ -21,6 +21,7 @@ def test_temp_legendre_series(k_max=3):
     R = 6.378e6  # [m]
     K_a = 0.026  # 2000 meters: 0.02276, Temp: 259.31 K, 
                    # source: https://en.wikipedia.org/wiki/List_of_thermal_conductivities
+    
     D = K_a/R**2  # No clue what D should be!
     x_s = 0.5  # Ice cap seperator, x_s = sin(ϕₛ)
     Q = 1*1360/4.0  # Incoming Solar Flux [W m⁻²]
