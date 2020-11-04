@@ -12,7 +12,7 @@ T_C, Cc, a_sc, r_sc, a_lc, r_lc = sy.symbols("T_C, Cc, a_sc, r_sc, a_lc, r_lc",
                                             real=True, positive=True)
 
 # Earth variables:
-T_E, r_se, r_le, eps_E, alpha, beta = sy.symbols("T_E, r_se, r_le, eps_E, alpha, beta",
+T_E, a_se, r_se, r_le, eps_E, alpha, beta = sy.symbols("T_E, a_se, r_se, r_le, eps_E, alpha, beta",
                                     real=True, positive=True)
 
 # Effective Black body emission power for atmosphere, clouds and the eart:
@@ -30,7 +30,7 @@ atmosphere_param_values = [(r_sm, 0.1065), (a_sw, 0.1451), (a_lw, 0.8258), (a_O3
 
 cloud_param_values = [(Cc, 0.66), (a_sc, 0.1239), (r_sc, 0.22), (a_lc, 0.622), (r_lc, 0.195)]
 
-earth_param_values = [(r_se, 0.17), (r_le, 0.0), (eps_E, 1.0), (alpha, 3), (beta, 4)]
+earth_param_values = [(a_se, 1.0), (r_se, 0.17), (r_le, 0.0), (eps_E, 1.0), (alpha, 3), (beta, 4)]
 
 parameter_values = base_param_values + atmosphere_param_values + \
                 cloud_param_values + earth_param_values

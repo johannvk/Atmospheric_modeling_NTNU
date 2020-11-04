@@ -26,6 +26,26 @@ def radiation_scattering(P_in, a, r):
 
 
 def scattering_mechanics_model(nudge=False, i=0):
+
+    # Downward pass of short wave radiation:
+    sw_S_to_A_refl, sw_S_to_A_abs, sw_S_to_A_trans = radiation_scattering(P_sun, a_sw, r_sm)
+
+    # Cc * P_S_to_A_trans Incoming sw radiation to Clouds:
+    sw_A_to_C_refl, sw_A_to_C_abs, sw_A_to_C_trans = radiation_scattering(Cc*sw_S_to_A_trans, a_sc, r_sc)
+
+    # (1 - Cc) * P_S_to_A_trans Incoming sw radiation to Earth: 
+    sw_A_to_E_refl, sw_A_to_E_abs, sw_A_to_E_trans = radiation_scattering((1 - Cc)*sw_S_to_A_trans, a_se, r_se)
+
+    # Incoming sw radiation from Cloud to earth:
+    sw_C_to_E_refl, sw_C_to_E_abs, sw_C_to_E_trans = radiation_scattering(sw_A_to_C_trans, a_se, r_se)
+    
+    # Total incoming sw radiation to earth:
+    sw_E_refl_tot = sw_A_to_E_refl + sw_C_to_E_refl
+
+    # Reflected sw radiation from the earth to clouds: Cc*sw_E_refl_tot
+    sw_E_to_C_refl, sw_E_to_C_abs, sw_E_to_C_trans = radiation_scattering(Cc*sw_E_refl_tot, a_sc, r_sc)
+
+    # TODO: One more sw reflecting + Long wave outgoing BB radiation and reflections of lw radiation.
     pass
     
 
