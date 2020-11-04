@@ -35,7 +35,7 @@ def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
         s_E = P_sun*(1-r_sm)*(1-a_sa)*((1-Cc)*(1-r_se) + Cc*(1-r_sc)*(1-a_sc)*geometric_reflection*(1-r_se)/(1-r_se*r_sc))*(1-r_se)
 
         equation = sy.Eq(l_E + s_E, tau_E + sy.Float(temperature_difference*7))
-        expr = l_E + s_E - (tau_E + sy.Float(7)*E_A_temp_diff)
+        expr = l_E + s_E - (tau_E + (beta+Cc*alpha)*E_C_temp_diff + (1-Cc)*alpha*E_A_temp_diff)
         return equation, expr
 
     def cloud_equation():
@@ -44,7 +44,7 @@ def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
         s_C = P_sun*(1 - r_sm)*(1 - a_sa)*Cc*(1 - r_sc)*geometric_reflection*a_sc*(1 + (1 - a_sc)*r_se*(1 - r_sc)/(1-r_sc*r_se))
 
         equation = sy.Eq(l_C + s_C + sy.Float(temperature_difference*7), 2*tau_C)
-        expr = l_C + s_C + sy.Float(7)*E_A_temp_diff - 2*tau_C
+        expr = l_C*a_lc + s_C + (beta+Cc*alpha)*E_C_temp_diff - 2*tau_C
         return equation, expr
 
     def atmosphere_equation():
@@ -53,8 +53,8 @@ def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
 
         s_A = P_sun*(1 - r_sm)*(a_sa + (1-a_sa)*Cc*r_sc*(1-r_sm)*geometric_reflection*a_sa + (1-a_sa)*(1-Cc)*r_se*a_sa)
         equation = sy.Eq(l_A + s_A, 2*tau_A)
-        expr = l_A + s_A - 2*tau_A
-        return equation, expr 
+        expr = l_A*a_lw + s_A + (1-Cc)*alpha*E_A_temp_diff - 2*tau_A
+        return equation, expr
 
 
     Earth_eq, earth_expr = earth_equation()
@@ -81,7 +81,7 @@ def solve_with_heat(tol = 0.001, nudge = False, i=0):
 
 def solve_temperatures(expressions, nudge=False, i=0):
     atm_expr, cloud_expr, earth_expr = expressions
-    
+
     if nudge:
         nudge_tup = (parameter_values[i][0], parameter_values[i][1]*1.01)
         subs_list = [nudge_tup] + parameter_values
@@ -95,23 +95,23 @@ def solve_temperatures(expressions, nudge=False, i=0):
     def objective(p):
         t_a, t_c, t_e = p
         return np.array([atm_func(t_e, t_a, t_c), cloud_func(t_e, t_a, t_c), earth_func(t_e, t_a, t_c)])
-    
+
     # Solutions: In order T_A, T_C, T_E:
     return fsolve(objective, x0=np.ones(3)*273.15)
 
 def sensitivity_analysis(tol = 0.00001):
-    param_names = ['sigma','psun','r_sm', 'a_sw', 'a_lw', 'a_03', 'eps_A', 'f_a', 
-                   'cc','a_sc', 'r_sc', 'a_lc', 'r_lc','r_se', 'r_le', 'eps_e']
-    
+    param_names = ['sigma','psun','r_sm', 'a_sw', 'a_lw', 'a_03', 'eps_A', 'f_a',
+                   'cc','a_sc', 'r_sc', 'a_lc', 'r_lc','r_se', 'r_le', 'eps_e', 'alpha','beta']
+
     model_eq, model_expr = cloud_atmosphere_model(temperature_difference=15, nudge=False)
-    
+
     orig_ans = solve_temperatures(model_expr)
 
     print(f"Model temperatures in Celsius: \nT_A: {orig_ans[0]-273.15}, \
-            \tT_C: {orig_ans[1]-273.15},\tT_E: {orig_ans[2]-273.15}.\n")    
-    
+            \tT_C: {orig_ans[1]-273.15},\tT_E: {orig_ans[2]-273.15}.\n")
+
     for i in range(len(parameter_values)):
-        
+
         print('i=', i, f"Nudging parameter: {param_names[i]}.")
         nudge_ans = solve_temperatures(model_expr, nudge=True, i=i)
 
