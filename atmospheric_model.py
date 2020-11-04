@@ -25,6 +25,11 @@ def radiation_scattering(P_in, a, r):
     return P_refl, P_abs, P_trans
 
 
+def scattering_mechanics_model(nudge=False, i=0):
+    pass
+    
+
+
 def cloud_atmosphere_model(temperature_difference, nudge=False, i=0):
     if nudge:
         parameter_values[i] = (parameter_values[i][0], parameter_values[i][1]*1.01)
