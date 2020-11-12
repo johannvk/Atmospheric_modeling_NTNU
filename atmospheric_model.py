@@ -25,6 +25,7 @@ def radiation_scattering(P_in, a, r):
     return P_refl, P_abs, P_trans
 
 
+
 def scattering_mechanics_model(nudge=False, i=0):
 
     # Downward pass of short wave radiation:
@@ -123,6 +124,7 @@ def solve_temperatures(expressions, nudge=False, i=0):
 
     # Solutions: In order T_A, T_C, T_E:
     return fsolve(objective, x0=np.ones(3)*273.15)
+
 
 def sensitivity_analysis(tol = 0.00001):
     param_names = ['sigma','psun','r_sm', 'a_sw', 'a_lw', 'a_03', 'eps_A', 'f_a',

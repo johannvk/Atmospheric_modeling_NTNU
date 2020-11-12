@@ -50,66 +50,6 @@ def simple_model():
     print("Earth temperature in Celsius:\t{:.3f}".format(t_e_Celsius))
 
 
-def downward_pass_cloud_model():
-    # Using fractional decomposing of Black Body radiation from Atmosphere and Clouds.
-    # Only a single downward pass, do not account for reflections upward again.
-
-    # Incoming radiation from the sun scattering in the atmosphere:
-    sw_A_refl, sw_A_abs, sw_A_trans = radiation_scattering(P_sun, a_sa, r_sm)
-
-    # Short wave scattering A -> C:
-    sw_A_to_C_refl, sw_A_to_C_abs, sw_A_to_C_trans = radiation_scattering(Cc*sw_A_trans, a_sc, r_sc)
-
-    # Short wave scattering A -> E:
-    sw_A_to_E_refl, sw_A_to_E_abs, sw_A_to_E_trans = radiation_scattering((1 - Cc)*sw_A_trans, a_se, r_se)
-
-    # Short wave scattering C -> E:
-    sw_C_to_E_refl, sw_C_to_E_abs, sw_C_to_E_trans = radiation_scattering(sw_A_to_C_trans, a_se, r_se)
-
-    # Downward facing Black Body power from the atmosphere:
-    P_down_BB_A = f_A*tau_A
-
-    # Black Body scattering A -> C:
-    bb_A_to_C_refl, bb_A_to_C_abs, bb_A_to_C_trans = radiation_scattering(Cc*P_down_BB_A, a_lc, r_lc)
-
-    # Black Body scattering A -> E:
-    bb_A_to_E_refl, bb_A_to_E_abs, bb_A_to_E_trans = radiation_scattering((1 - Cc)*P_down_BB_A, a_le, r_le)
-
-    # Black Body scattering C -> A:
-    bb_C_to_A_refl, bb_C_to_A_abs, bb_C_to_A_trans = radiation_scattering(sy.Rational(1/2)*tau_C, a_la, r_la)
-
-    # Black Body scattering C -> E:
-    bb_C_to_E_refl, bb_C_to_E_abs, bb_C_to_E_trans = radiation_scattering(sy.Rational(1/2)*tau_C, a_le, r_le)
-    
-    # Black Body scattering E -> C:
-    bb_E_to_C_refl, bb_E_to_C_abs, bb_E_to_C_trans = radiation_scattering(Cc*tau_E, a_lc, r_lc)
-
-    # Black Body scattering E -> A:
-    bb_E_to_A_refl, bb_E_to_A_abs, bb_E_to_A_trans = radiation_scattering((1 - Cc)*tau_E, a_la, r_la)
-
-    # Long wave scattering C -> E:
-
-
-    # Incoming Power = Outgoing Power:
-    atmosphere_equation = sy.Eq(sw_A_abs + bb_C_to_A_abs + bb_E_to_A_abs, tau_A)
-
-    cloud_equation = sy.Eq(sw_A_to_C_abs + bb_A_to_C_abs + bb_E_to_C_abs, tau_C)
-
-    earth_equation = sy.Eq(sw_A_to_E_abs + sw_C_to_E_abs + bb_C_to_E_abs + bb_A_to_E_abs, tau_E)
-    equations = [atmosphere_equation, cloud_equation, earth_equation]
-    subs_equations = [eq.subs(parameter_values) for eq in equations]
-    print(subs_equations)
-    
-    ans = solve(subs_equations, [T_A**4, T_C**4, T_E**4])
-    
-    if type(ans) is dict:
-        ans["T_E_Celsius"] = ans[T_E**4]**(1/4) - 273.15
-        ans["T_C_Celsius"] = ans[T_C**4]**(1/4) - 273.15
-        ans["T_A_Celsius"] = ans[T_A**4]**(1/4) - 273.15
-
-    print("Ans:\n", ans)
-
-
 def cloud_atmosphere_model():
     # f_A = 2*f_A
     def earth_equation():
@@ -153,6 +93,5 @@ def atmospheric_model():
 if __name__ == "__main__":
     # simple_model()
     # atmospheric_model()
-    downward_pass_cloud_model()
-    # cloud_atmosphere_model()
+    cloud_atmosphere_model()
     pass
